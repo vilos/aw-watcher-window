@@ -1,17 +1,34 @@
-import subprocess
-from subprocess import PIPE
-import os
+from AppKit import NSWorkspace
+from Quartz import (
+        CGWindowListCopyWindowInfo,
+        kCGWindowListOptionOnScreenOnly,
+        kCGNullWindowID
+    )
 
 
-def getInfo() -> str:
-    cmd = ["osascript", os.path.join(os.path.dirname(os.path.realpath(__file__)), "printAppTitle.scpt")]
-    p = subprocess.run(cmd, stdout=PIPE)
-    return str(p.stdout, "utf8").strip()
+def getInfo() -> tuple:
+    # curr_app = NSWorkspace.sharedWorkspace().frontmostApplication() # returns always python
+    window_title = app_name = 'Unknown'
+
+    curr_pid = NSWorkspace.sharedWorkspace().activeApplication()['NSApplicationProcessIdentifier']
+
+    options = kCGWindowListOptionOnScreenOnly
+    window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+
+    try:
+        window = [w for w in window_list if curr_pid == w['kCGWindowOwnerPID']][0]
+    except IndexError:
+        pass
+    else:
+        window_title = window.get('kCGWindowName', window_title)
+        app_name = window.get('kCGWindowOwnerName', app_name)
+
+    return (app_name, window_title)
 
 
 def getApp(info) -> str:
-    return info.split('","')[0][1:]
+    return info[0]
 
 
 def getTitle(info) -> str:
-    return info.split('","')[1][:-1]
+    return info[1]
